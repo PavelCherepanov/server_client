@@ -4,7 +4,10 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"strings"
 )
+
+const END_DATA = "[END-DATA]"
 
 func main() {
 	// прослушиваем порт 8080
@@ -19,13 +22,30 @@ func main() {
 	for {
 		conn, err := listen.Accept()
 		if err != nil {
-			break
+			continue
 		}
 		go server(conn)
 	}
 }
 
 func server(conn net.Conn) {
-	conn.Write([]byte("hello"))
-	conn.Close()
+	defer conn.Close()
+	var buffer = make([]byte, 256)
+	var message string
+	for {
+		length, err := conn.Read(buffer)
+		if err != nil {
+			return
+		}
+		message += string(buffer[:length])
+		// оканчивается строчка на END_DATA
+		if strings.HasSuffix(message, END_DATA) {
+			//  возвращает все кроме конца END_DATA
+			message = strings.TrimSuffix(message, END_DATA)
+			break
+		}
+	}
+
+	conn.Write([]byte(strings.ToUpper(message)))
+
 }
